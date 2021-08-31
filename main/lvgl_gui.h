@@ -38,6 +38,13 @@ void SSD1306_init(void);
  */
 void updata_radio_info_label(audio_element_info_t music_info);
 
+
+/**
+ * @brief 开机加载动画显示
+ * 
+ */
+void my_lvgl_load_anim();
+
 /**
  * @brief LVGL GUI程序
  * 

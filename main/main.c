@@ -123,6 +123,10 @@ void app_main(void)
 #else
     tcpip_adapter_init();
 #endif
+
+    /* ssd1306 LVGL初始化 */
+    SSD1306_init();
+    my_lvgl_load_anim();
     wifi_connect();
 
     xTaskCreate(state_task, "state_task", 2048, NULL, 15, NULL);
@@ -133,10 +137,7 @@ void app_main(void)
     /* 独立按键初始化 */
     board_button_init();
     
-    /* ssd1306 LVGL初始化 */
-    SSD1306_init();
-    
-    /* GUI绘制 */
+    /* APP_GUI绘制 */
     my_lvgl_app();
     
     

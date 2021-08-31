@@ -252,8 +252,8 @@ static void radio_label_event_cb(lv_event_t* e)
         {
             // 切换上一个电台URL  参考mp3_control
             HLS_list_index--;
-            if (HLS_list_index == 0)
-                HLS_list_index = MAX_HLS_URL_NUM;
+            if (HLS_list_index == 255)
+                HLS_list_index = MAX_HLS_URL_NUM - 1;
             audio_pipeline_stop(pipeline);
             audio_pipeline_wait_for_stop(pipeline);
             audio_pipeline_terminate(pipeline);
@@ -428,6 +428,20 @@ void updata_radio_info_label(audio_element_info_t music_info)
                           music_info.sample_rates, music_info.bits, music_info.channels);
     }
     
+}
+
+/**
+ * @brief 开机加载动画显示
+ * 
+ */
+void my_lvgl_load_anim()
+{
+    lv_obj_t* load_scr = lv_obj_create(NULL);    //创建屏幕
+    lv_scr_load(load_scr);
+    lv_obj_t* symbol_label = lv_label_create(load_scr);
+    lv_obj_set_style_text_font(symbol_label, &lv_font_montserrat_20, 0);
+    lv_obj_align(symbol_label, LV_ALIGN_CENTER, 0, 0);
+    lv_label_set_text(symbol_label, LV_SYMBOL_LOOP"Loading...");
 }
 
 /**
