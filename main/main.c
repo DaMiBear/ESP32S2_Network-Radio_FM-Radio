@@ -26,6 +26,8 @@
 #include "get_time.h"
 #include <time.h>
 #include <sys/time.h>
+
+#include "rda5807m_app.h"
 static const char *TAG = "main";
 
 extern lv_obj_t* data_time_label1;             // 当前时间标签
@@ -75,7 +77,7 @@ static void state_task(void *pvParameters)
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 }
-static void time_task()
+static void time_task(void *pvParameters)
 {
     time_t now = 0;
     struct tm timeinfo = { 0 };
@@ -101,8 +103,11 @@ static void time_task()
     
 }
 
+
+
 void app_main(void)
 {
+    /* 开机默认网络电台输出 */
     gpio_config_t io_conf;
     io_conf.intr_type = GPIO_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_OUTPUT;
@@ -126,7 +131,10 @@ void app_main(void)
 
     /* ssd1306 LVGL初始化 */
     SSD1306_init();
+
+    /* 加载动画显示 */
     my_lvgl_load_anim();
+
     wifi_connect();
 
     xTaskCreate(state_task, "state_task", 2048, NULL, 15, NULL);
@@ -137,6 +145,9 @@ void app_main(void)
     /* 独立按键初始化 */
     board_button_init();
     
+    /* FM模块rda5807初始化 */
+    rda5807m_app_init();
+
     /* APP_GUI绘制 */
     my_lvgl_app();
     

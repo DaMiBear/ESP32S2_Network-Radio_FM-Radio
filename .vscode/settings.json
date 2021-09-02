@@ -15,6 +15,12 @@
         "time.h": "c",
         "sstream": "c",
         "set": "c",
-        "play_living_stream.h": "c"
+        "play_living_stream.h": "c",
+        "string.h": "c",
+        "rda5807m.h": "c",
+        "i2cdev.h": "c",
+        "stdbool.h": "c",
+        "rda5807m_app.h": "c",
+        "esp_log.h": "c"
     }
 }

@@ -34,6 +34,7 @@
 #endif
 
 static const char *TAG = "PLAY_LIVING_STREAM";
+uint8_t HLS_list_index = 0;
 HLS_INFO_t HLS_list[MAX_HLS_URL_NUM] = {
     {.hls_url = "http://open.ls.qingting.fm/live/386/64k.m3u8?format=aac", .program_name = "中国之声"}, // 中国之声
     {.hls_url = "http://open.ls.qingting.fm/live/274/64k.m3u8?format=aac", .program_name = "上海动感101"},  // 上海动感101
@@ -42,8 +43,6 @@ HLS_INFO_t HLS_list[MAX_HLS_URL_NUM] = {
     {.hls_url = "http://open.ls.qingting.fm/live/387/64k.m3u8?format=aac", .program_name = "CNR经济之声"},  // CNR经济之声
 };
 
-
-TaskHandle_t living_stream_task_xHandle = NULL;
 
 audio_pipeline_handle_t pipeline;
 audio_element_handle_t http_stream_reader, output_stream_writer, aac_decoder;
@@ -206,17 +205,22 @@ void play_living_stream_start(void)
     ESP_LOGI(TAG, "[ 5 ] Start audio_pipeline");
     audio_pipeline_run(pipeline);
 
-    xTaskCreate(living_stream_task, "living_stream_task", 1024*2, NULL, 0, &living_stream_task_xHandle);
+    xTaskCreate(living_stream_task, "living_stream_task", 1024*2, NULL, 0, NULL);
     
 }
 
 void play_living_stream_end()
 {
-
     audio_pipeline_stop(pipeline);
     audio_pipeline_wait_for_stop(pipeline);
     audio_pipeline_terminate(pipeline);
-    
-    
-    
+}
+
+void play_living_stream_restart()
+{
+    ESP_LOGW(TAG, "start living_stream, current URL: %s", HLS_list[HLS_list_index].hls_url);
+    audio_element_set_uri(http_stream_reader, HLS_list[HLS_list_index].hls_url);          
+    audio_pipeline_reset_ringbuffer(pipeline);
+    audio_pipeline_reset_elements(pipeline);
+    audio_pipeline_run(pipeline);
 }

@@ -31,6 +31,8 @@
 
 #include "play_living_stream.h"
 
+#include "rda5807m_app.h"
+
 static const char *TAG = "lvgl_gui";
 
 typedef struct {
@@ -140,16 +142,38 @@ static lv_group_t* g = NULL;                // 组对象
 static lv_obj_t* radio_label = NULL;        // 网络节目名称标签
 static lv_obj_t* radio_info_label = NULL;   // 网络节目信息标签
 static lv_obj_t* fre_label = NULL;          // 当前频段标签
+static lv_obj_t* rssi_label = NULL;          // 当前rssi标签
 lv_obj_t* data_time_label1 = NULL;          // 当前时间标签
 lv_obj_t* data_time_label2 = NULL;
 
-static uint8_t HLS_list_index = 0;
+TaskHandle_t updata_rda5807m_info_task_handle = NULL;   // 更新RDA5807M信息任务句柄
 
 extern audio_pipeline_handle_t pipeline;
 extern audio_element_handle_t http_stream_reader, output_stream_writer, aac_decoder;
 extern audio_event_iface_handle_t evt;
 extern esp_periph_set_handle_t set;
 extern HLS_INFO_t HLS_list[];
+extern uint8_t HLS_list_index;
+
+extern uint32_t rda5807m_current_fre;
+
+static void updata_rda5807m_info_task(void *pvParameters)
+{
+    rda5807m_state_t state;
+    
+    while (1)
+    {
+        if (fre_label != NULL && rssi_label != NULL && lv_scr_act() == my_scr2)
+        {
+            // 在标签已经创建后，并且当前屏幕是FM的情况下才进行更新
+            rda5807m_app_get_state(&state);     // 获得5807目前状态
+            lv_label_set_text_fmt(fre_label, "%.1fMHz", ((float)(state.frequency)/1000));
+            lv_label_set_text_fmt(rssi_label, "RSSI:%d", state.rssi);
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        }
+    }
+    
+}
 
 /**
  * @brief 读取键盘回调函数
@@ -174,18 +198,20 @@ static void keypad_read_cb(struct _lv_indev_drv_t* indev_drv, lv_indev_data_t* d
                 play_living_stream_end();
                 gpio_set_level(GPIO_NUM_41, 1);     // 模拟开挂切换至FM输出
                 gpio_set_level(GPIO_NUM_42, 0);
+                // 创建FM屏幕上RDA5807M信息更新的任务
+                xTaskCreate(updata_rda5807m_info_task, "updata_rda5807m_task", 2048, NULL, 0, &updata_rda5807m_info_task_handle);  
+                configASSERT(updata_rda5807m_info_task_handle);
                 printf("changed to scr2\n");
             }
             else if (lv_scr_act() == my_scr2)
             {
+                if (updata_rda5807m_info_task_handle != NULL)
+                    vTaskDelete(updata_rda5807m_info_task_handle);   // 删除FM屏幕上RDA5807M信息更新任务
+
                 lv_scr_load_anim(my_scr1, LV_SCR_LOAD_ANIM_OVER_RIGHT, 300, 100, false);
                 lv_group_focus_obj(radio_label);      // 切换聚焦对象
                 /* 开始living_stream */
-                ESP_LOGW(TAG, "start living_stream, current URL: %s", HLS_list[HLS_list_index].hls_url);
-                audio_element_set_uri(http_stream_reader, HLS_list[HLS_list_index].hls_url);          
-                audio_pipeline_reset_ringbuffer(pipeline);
-                audio_pipeline_reset_elements(pipeline);
-                audio_pipeline_run(pipeline);
+                play_living_stream_restart();
                 gpio_set_level(GPIO_NUM_42, 1);     // 模拟开挂切换至网络电台输出
                 gpio_set_level(GPIO_NUM_41, 1);
                 printf("changed to scr1\n");
@@ -206,8 +232,11 @@ static void keypad_read_cb(struct _lv_indev_drv_t* indev_drv, lv_indev_data_t* d
         }
         else if (ch == 'r')
         {
+            static uint8_t cnt = 0;
             data->key = 'r';      // 即使注释，也会触发LV_EVENT_KEY事件，只是获取不了键值
             data->state = LV_INDEV_STATE_PRESSED;
+            gpio_set_level(GPIO_NUM_41, cnt % 2);   // 反转电平, 运放使能控制
+            cnt++; 
             printf("Got 'r'\n");
         }
         
@@ -271,7 +300,6 @@ static void radio_label_event_cb(lv_event_t* e)
 
 static void fre_label_event_cb(lv_event_t* e)
 {
-    static uint8_t cnt = 1;
     lv_obj_t* obj = lv_event_get_target(e);     // 获取触发事件的对象
     lv_event_code_t code = lv_event_get_code(e);
     printf("fre_label_event_cb\n");
@@ -281,11 +309,13 @@ static void fre_label_event_cb(lv_event_t* e)
         if (get_key == 'w' && my_scr2 == lv_scr_act())
         {
             // 当前为my_scr2时，才能切换频段
-            lv_label_set_text_fmt(obj, "10%dMHz", ++cnt);
+            rda5807m_app_add_frequency(100);
+            lv_label_set_text_fmt(obj, "%.1fMHz", ((float)rda5807m_current_fre/1000));
         }
         else if (get_key == 'e' && my_scr2 == lv_scr_act())
         {
-            lv_label_set_text_fmt(obj, "10%dMHz", --cnt);
+            rda5807m_app_reduce_frequency(100);
+            lv_label_set_text_fmt(obj, "%.1fMHz", ((float)rda5807m_current_fre/1000));
         }
     }
 }
@@ -347,15 +377,17 @@ static void FM_radio_scr_create()
     lv_style_set_pad_row(&row_container_style, 0);  // 改变元素间距
     lv_obj_add_style(my_scr2, &row_container_style, 0);
 
-    /* FM标签 */
-    lv_obj_t* FM_label = lv_label_create(my_scr2);
-    lv_label_set_text(FM_label, "FM Mode");
-
     /* 当前频段 */
     fre_label = lv_label_create(my_scr2);
-    lv_label_set_text(fre_label, "85.01MHz");
+    lv_obj_set_style_text_font(fre_label, &lv_font_montserrat_20, 0);
+    lv_label_set_text_fmt(fre_label, "%.1fMHz", ((float)rda5807m_current_fre/1000));
     lv_group_add_obj(g, fre_label);     // 添加到组中
     lv_obj_add_event_cb(fre_label, fre_label_event_cb, LV_EVENT_KEY, NULL);     // 配置事件
+
+    /* 当前信号RSSI */
+    rssi_label = lv_label_create(my_scr2);
+    lv_obj_set_style_text_font(rssi_label, &lv_font_montserrat_20, 0);
+    lv_label_set_text(rssi_label, "RSSI:0");
     /* 当前日期时间 */
     data_time_label2 = lv_label_create(my_scr2);
     lv_obj_set_width(data_time_label2, 128);
