@@ -33,6 +33,9 @@
 
 #include "rda5807m_app.h"
 
+// wait for execute lv_task_handler and lv_tick_inc to avoid some widget don't refresh.
+#define LVGL_TICK_MS 1
+
 static const char *TAG = "lvgl_gui";
 
 typedef struct {
@@ -40,8 +43,6 @@ typedef struct {
     touch_panel_driver_t *touch_drv;
 } lvgl_drv_t;
 
-// wait for execute lv_task_handler and lv_tick_inc to avoid some widget don't refresh.
-#define LVGL_TICK_MS 1
 
 static void lv_tick_timercb(void *timer)
 {
@@ -176,73 +177,76 @@ static void updata_rda5807m_info_task(void *pvParameters)
 }
 
 /**
- * @brief 读取键盘回调函数
+ * @brief LVGL读取键盘回调函数
  * 
  * @param indev_drv 
  * @param data 
  */
 static void keypad_read_cb(struct _lv_indev_drv_t* indev_drv, lv_indev_data_t* data)
 {
-    if (board_button_is_pressed())
-    {
-        uint32_t ch = board_button_get_key();
-        if (ch == 'q')
-        {
-            data->key = 'q';
-            data->state = LV_INDEV_STATE_PRESSED;
-            if (lv_scr_act() == my_scr1)
-            {
-                lv_scr_load_anim(my_scr2, LV_SCR_LOAD_ANIM_OVER_LEFT, 300, 100, false);
-                lv_group_focus_obj(fre_label);     // 切换聚焦对象
-                /* 停止living_stream */
-                play_living_stream_end();
-                gpio_set_level(GPIO_NUM_41, 1);     // 模拟开挂切换至FM输出
-                gpio_set_level(GPIO_NUM_42, 0);
-                // 创建FM屏幕上RDA5807M信息更新的任务
-                xTaskCreate(updata_rda5807m_info_task, "updata_rda5807m_task", 2048, NULL, 0, &updata_rda5807m_info_task_handle);  
-                configASSERT(updata_rda5807m_info_task_handle);
-                printf("changed to scr2\n");
-            }
-            else if (lv_scr_act() == my_scr2)
-            {
-                if (updata_rda5807m_info_task_handle != NULL)
-                    vTaskDelete(updata_rda5807m_info_task_handle);   // 删除FM屏幕上RDA5807M信息更新任务
+    static button_event_t g_buttons_event[BUTTON_NUM] = {0};
+    board_button_get_event(g_buttons_event);
 
-                lv_scr_load_anim(my_scr1, LV_SCR_LOAD_ANIM_OVER_RIGHT, 300, 100, false);
-                lv_group_focus_obj(radio_label);      // 切换聚焦对象
-                /* 开始living_stream */
-                play_living_stream_restart();
-                gpio_set_level(GPIO_NUM_42, 1);     // 模拟开挂切换至网络电台输出
-                gpio_set_level(GPIO_NUM_41, 1);
-                printf("changed to scr1\n");
-            }
-            printf("Got 'q'\n");
-        }
-        else if (ch == 'w')
+    if (g_buttons_event[0] == BUTTON_SINGLE_CLICK)
+    {
+        data->key = 'q';
+        data->state = LV_INDEV_STATE_PRESSED;
+        if (lv_scr_act() == my_scr1)
         {
-            data->key = 'w';
-            data->state = LV_INDEV_STATE_PRESSED;
-            printf("Got 'w'\n");
+            lv_scr_load_anim(my_scr2, LV_SCR_LOAD_ANIM_OVER_LEFT, 300, 100, false);
+            lv_group_focus_obj(fre_label);     // 切换聚焦对象
+            /* 停止living_stream */
+            play_living_stream_end();
+            // 模拟开关切换至FM输出
+            gpio_set_level(GPIO_NUM_42, 0);
+            // 创建FM屏幕上RDA5807M信息更新的任务
+            xTaskCreate(updata_rda5807m_info_task, "updata_rda5807m_task", 2048, NULL, 0, &updata_rda5807m_info_task_handle);  
+            configASSERT(updata_rda5807m_info_task_handle);
+            ESP_LOGI(TAG, "changed to scr2");
         }
-        else if (ch == 'e')
+        else if (lv_scr_act() == my_scr2)
         {
-            data->key = 'e';
-            data->state = LV_INDEV_STATE_PRESSED;
-            printf("Got 'e'\n");
+            if (updata_rda5807m_info_task_handle != NULL)
+                vTaskDelete(updata_rda5807m_info_task_handle);   // 删除FM屏幕上RDA5807M信息更新任务
+
+            lv_scr_load_anim(my_scr1, LV_SCR_LOAD_ANIM_OVER_RIGHT, 300, 100, false);
+            lv_group_focus_obj(radio_label);      // 切换聚焦对象
+            /* 开始living_stream */
+            play_living_stream_restart();
+            // 模拟开关切换至网络电台输出
+            gpio_set_level(GPIO_NUM_42, 1);     
+            ESP_LOGI(TAG, "changed to scr1\n");
         }
-        else if (ch == 'r')
-        {
-            static uint8_t cnt = 0;
-            data->key = 'r';      // 即使注释，也会触发LV_EVENT_KEY事件，只是获取不了键值
-            data->state = LV_INDEV_STATE_PRESSED;
-            gpio_set_level(GPIO_NUM_41, cnt % 2);   // 反转电平, 运放使能控制
-            cnt++; 
-            printf("Got 'r'\n");
-        }
-        
+        board_button_clean_event();     // 执行按键相关操作后必须进行清除事件
+        ESP_LOGI(TAG, "Got 'q'");
+    }
+    else if (g_buttons_event[1] == BUTTON_SINGLE_CLICK || g_buttons_event[1] == BUTTON_LONG_PRESS_HOLD)
+    {
+        data->key = 'w';
+        data->state = LV_INDEV_STATE_PRESSED;
+        board_button_clean_event();     // 执行按键相关操作后必须进行清除事件
+        ESP_LOGI(TAG, "Got 'w'");
+    }
+    else if (g_buttons_event[2] == BUTTON_SINGLE_CLICK || g_buttons_event[2] == BUTTON_LONG_PRESS_HOLD)
+    {
+        data->key = 'e';
+        data->state = LV_INDEV_STATE_PRESSED;
+        board_button_clean_event();     // 执行按键相关操作后必须进行清除事件
+        ESP_LOGI(TAG, "Got 'e'");
+    }
+    else if (g_buttons_event[3] == BUTTON_SINGLE_CLICK)
+    {
+        static uint8_t cnt = 0;
+        data->key = 'r';      // 即使注释，也会触发LV_EVENT_KEY事件，只是获取不了键值
+        data->state = LV_INDEV_STATE_PRESSED;
+        gpio_set_level(GPIO_NUM_41, cnt % 2);   // 反转电平, 运放使能控制
+        cnt++; 
+        board_button_clean_event();     // 执行按键相关操作后必须进行清除事件
+        ESP_LOGI(TAG, "Got 'r'");
     }
     else
         data->state = LV_INDEV_STATE_RELEASED;
+    
 }
 
 /**
@@ -254,10 +258,10 @@ static void radio_label_event_cb(lv_event_t* e)
 {
     lv_obj_t* obj = lv_event_get_target(e);     // 获取触发事件的对象
     lv_event_code_t code = lv_event_get_code(e);
-    printf("radio_label_event_cb\n");
     
     if (code == LV_EVENT_KEY)
     {
+        printf("radio_label_event_cb\n");
         uint32_t get_key = lv_indev_get_key(lv_indev_get_act());
         if (get_key == 'w' && my_scr1 == lv_scr_act())
         {
@@ -274,7 +278,8 @@ static void radio_label_event_cb(lv_event_t* e)
             audio_pipeline_reset_ringbuffer(pipeline);
             audio_pipeline_reset_elements(pipeline);
             audio_pipeline_run(pipeline);
-           
+
+            vTaskDelay(pdMS_TO_TICKS(500)); // 防止切换太快导致出错，目前只是简单加延时解决
             lv_label_set_text_fmt(obj, "%s", HLS_list[HLS_list_index].program_name);
         }
         else if (get_key == 'e' && my_scr1 == lv_scr_act())
@@ -292,19 +297,20 @@ static void radio_label_event_cb(lv_event_t* e)
             audio_pipeline_reset_elements(pipeline);
             audio_pipeline_run(pipeline);
 
+            vTaskDelay(pdMS_TO_TICKS(500)); // 防止切换太快导致出错，目前只是简单加延时解决
             lv_label_set_text_fmt(obj, "%s", HLS_list[HLS_list_index].program_name);
         }
     }
-
 }
 
 static void fre_label_event_cb(lv_event_t* e)
 {
     lv_obj_t* obj = lv_event_get_target(e);     // 获取触发事件的对象
     lv_event_code_t code = lv_event_get_code(e);
-    printf("fre_label_event_cb\n");
+    
     if (code == LV_EVENT_KEY)
     {
+        printf("fre_label_event_cb\n");
         uint32_t get_key = lv_indev_get_key(lv_indev_get_act());
         if (get_key == 'w' && my_scr2 == lv_scr_act())
         {
@@ -340,7 +346,8 @@ static void internet_radio_scr_create()
     lv_obj_t* ip_address_label = lv_label_create(my_scr1); // 从当前活动屏幕创建
     //lv_obj_set_pos(ip_address_label, 0, 0);
     //lv_obj_set_size(ip_address_label, 128, 8);
-    lv_label_set_text(ip_address_label, "192.168.101.100");
+    lv_label_set_text(ip_address_label, "104.18.27.85");
+    // lv_label_set_text(ip_address_label, "223.4.222.202");
     /* 节目名称 */
     radio_label = lv_label_create(my_scr1);
     //lv_obj_set_pos(radio_label, 0, 9);
@@ -351,13 +358,13 @@ static void internet_radio_scr_create()
     /* 节目信息 */
     radio_info_label = lv_label_create(my_scr1);
     lv_obj_set_width(radio_info_label, 128);
-    lv_label_set_long_mode(radio_info_label, LV_LABEL_LONG_SCROLL);     // 来回滑动显示
+    // lv_label_set_long_mode(radio_info_label, LV_LABEL_LONG_SCROLL);     // 来回滑动显示
     /* 当前日期时间 */
     data_time_label1 = lv_label_create(my_scr1);
     lv_obj_set_width(data_time_label1, 128);
     // lv_label_set_long_mode(data_time_label1, LV_LABEL_LONG_SCROLL);
     // get_current_time(current_time, sizeof(current_time));
-    lv_label_set_text(data_time_label1, "current_time");
+    lv_label_set_text(data_time_label1, "updating time...");
 
     lv_group_add_obj(g, radio_label);   // 控制的对象添加到组中
     lv_obj_add_event_cb(radio_label, radio_label_event_cb, LV_EVENT_KEY, NULL);     // 添加事件
@@ -392,7 +399,7 @@ static void FM_radio_scr_create()
     data_time_label2 = lv_label_create(my_scr2);
     lv_obj_set_width(data_time_label2, 128);
     //lv_obj_set_pos(data_time_label2, 0, 50);
-    lv_label_set_text(data_time_label2, "current_time");
+    lv_label_set_text(data_time_label2, "updating time...");
 
 
 }

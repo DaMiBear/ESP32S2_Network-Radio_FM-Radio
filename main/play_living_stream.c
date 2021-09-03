@@ -43,7 +43,6 @@ HLS_INFO_t HLS_list[MAX_HLS_URL_NUM] = {
     {.hls_url = "http://open.ls.qingting.fm/live/387/64k.m3u8?format=aac", .program_name = "CNR经济之声"},  // CNR经济之声
 };
 
-
 audio_pipeline_handle_t pipeline;
 audio_element_handle_t http_stream_reader, output_stream_writer, aac_decoder;
 audio_event_iface_handle_t evt;

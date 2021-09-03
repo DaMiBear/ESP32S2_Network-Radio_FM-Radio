@@ -33,30 +33,6 @@ static const char *TAG = "main";
 extern lv_obj_t* data_time_label1;             // 当前时间标签
 extern lv_obj_t* data_time_label2;
 
-static void screen_clear(scr_driver_t *lcd, int color)
-{
-    scr_info_t lcd_info;
-    lcd->get_info(&lcd_info);
-    uint16_t *buffer = malloc(lcd_info.width * sizeof(uint16_t));
-    if (NULL == buffer) {
-        for (size_t y = 0; y < lcd_info.height; y++) {
-            for (size_t x = 0; x < lcd_info.width; x++) {
-                
-                lcd->draw_pixel(x, y, color);
-            }
-        }
-    } else {
-        for (size_t i = 0; i < lcd_info.width; i++) {
-            buffer[i] = color;
-        }
-
-        for (int y = 0; y < lcd_info.height / 8; y++) {
-            lcd->draw_bitmap(0, y*8, lcd_info.width, 8, buffer);
-        }
-        
-        free(buffer);
-    }
-}
 
 //回调函数
 static void state_task(void *pvParameters)
@@ -93,7 +69,7 @@ static void time_task(void *pvParameters)
         tzset();
         localtime_r(&now, &timeinfo);
         strftime(strftime_buf, sizeof(strftime_buf), "%Y-%m-%d      %H:%M:%S", &timeinfo);
-        if (data_time_label1 != NULL && data_time_label2 != NULL)
+        if (data_time_label1 != NULL && data_time_label2 != NULL && timeinfo.tm_year > (2020-1900)) // 大于2020-1900是因为有时ntp更新时间太慢,tm_year是与1900时间差
         {
             lv_label_set_text(data_time_label1, strftime_buf);
             lv_label_set_text(data_time_label2, strftime_buf);
@@ -138,7 +114,7 @@ void app_main(void)
     wifi_connect();
 
     xTaskCreate(state_task, "state_task", 2048, NULL, 15, NULL);
-    xTaskCreate(time_task, "time_task", 1024*2, NULL, 0, NULL);
+    xTaskCreate(time_task, "time_task", 1024*2, NULL, 10, NULL);
     /* HLS初始化 */
     play_living_stream_start();
     

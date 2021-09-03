@@ -21,6 +21,10 @@
         "i2cdev.h": "c",
         "stdbool.h": "c",
         "rda5807m_app.h": "c",
-        "esp_log.h": "c"
+        "esp_log.h": "c",
+        "lvgl.h": "c",
+        "iot_button.h": "c",
+        "board_button.h": "c",
+        "task.h": "c"
     }
 }

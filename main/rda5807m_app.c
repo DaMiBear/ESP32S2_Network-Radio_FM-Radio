@@ -75,7 +75,7 @@ void rda5807m_app_add_frequency(uint32_t delta)
 {
     rda5807m_current_fre += delta;
     if (rda5807m_current_fre > 108000)
-        rda5807m_current_fre = 108000;
+        rda5807m_current_fre = 88000;
     rda5807m_set_frequency_khz(&rda5807m_dev, rda5807m_current_fre);
 }
 
@@ -87,6 +87,6 @@ void rda5807m_app_reduce_frequency(uint32_t delta)
 {
     rda5807m_current_fre -= delta;
     if (rda5807m_current_fre < 88000)
-        rda5807m_current_fre = 88000;
+        rda5807m_current_fre = 108000;
     rda5807m_set_frequency_khz(&rda5807m_dev, rda5807m_current_fre);
 }
