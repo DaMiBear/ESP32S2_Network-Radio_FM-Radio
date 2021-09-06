@@ -50,6 +50,16 @@ VS Code打开项目文件夹后，F1输入如下命令，选择根据你的设�
 
 <img src="/docs/images/2.png" alt="2" style="zoom:80%;" />
 
+###### Serial flasher config
+
+Flash size改为4MB
+
+###### Partition Table
+
+更改为如下设置，默认的factory大小只有1M是不够的，要改为3M
+
+<img src="/docs/images/14.png" alt="14" style="zoom:80%;" />
+
 ###### Audio HAL
 
 选择ESP32-S2-Kaluga-1，这个选项是属于ADF里的，ADF里大多数程序都是按照官方提供的那些开发板来的，官方开发板中的S2是有2MB的PSRAM的，这里主要是为了产生一些宏定义防止编译出错，具体初始化的程序是我们自己写的。
@@ -88,11 +98,19 @@ VS Code打开项目文件夹后，F1输入如下命令，选择根据你的设�
 
 勾选`LVGL minimal configuration`
 
+###### Color settings
+
+选择1:1
+
 ###### Memory settings
 
 设置为6，默认的大小为32，就是32K，这样就会产生一个大小为32K的全局变量，这个才是内存占用的罪魁祸首。一开始没发现这一点，导致加入LVGL程序后，内存根本不够用。这里设置为6可以不报错，试过5或者更小，但在运行过程中会出错。
 
 <img src="/docs/images/7.png"  style="zoom: 80%;" />
+
+###### Feature configuration - Others
+
+勾选`Enable float in built-in (v)snprintf functions`来支持浮点数显示
 
 ###### Font usage - Enable built-in fonts
 
