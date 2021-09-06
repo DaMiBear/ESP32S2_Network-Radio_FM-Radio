@@ -37,29 +37,13 @@ static void initialize_sntp(void)
 }
 void obtain_time(void)
 {
-    // vTaskDelay(pdMS_TO_TICKS(5000));
     initialize_sntp();
 
     // wait for time to be set
-    time_t now = 0;
-    struct tm timeinfo = { 0 };
     int retry = 0;
     const int retry_count = 10;
     while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count) {
         ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
-    
-    time(&now);
-    localtime_r(&now, &timeinfo);
-
-    // Set timezone to China Standard Time
-    char strftime_buf[64];
-    setenv("TZ", "CST-8", 1);
-    tzset();
-    localtime_r(&now, &timeinfo);
-    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-    ESP_LOGI(TAG, "The current date/time in Shanghai is: %s", strftime_buf);
-
-    // ESP_ERROR_CHECK( example_disconnect() );
 }

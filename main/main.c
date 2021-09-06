@@ -34,7 +34,11 @@ extern lv_obj_t* data_time_label1;             // 当前时间标签
 extern lv_obj_t* data_time_label2;
 
 
-//回调函数
+/**
+ * @brief 查看空闲DRAM任务
+ * 
+ * @param pvParameters 
+ */
 static void state_task(void *pvParameters)
 {
 	// static char InfoBuffer[512] = {
@@ -53,6 +57,12 @@ static void state_task(void *pvParameters)
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 }
+
+/**
+ * @brief SNTP校时任务
+ * 
+ * @param pvParameters 
+ */
 static void time_task(void *pvParameters)
 {
     time_t now = 0;
@@ -78,8 +88,6 @@ static void time_task(void *pvParameters)
     }
     
 }
-
-
 
 void app_main(void)
 {
@@ -113,7 +121,7 @@ void app_main(void)
 
     wifi_connect();
 
-    xTaskCreate(state_task, "state_task", 2048, NULL, 15, NULL);
+    // xTaskCreate(state_task, "state_task", 2048, NULL, 15, NULL);
     xTaskCreate(time_task, "time_task", 1024*2, NULL, 10, NULL);
     /* HLS初始化 */
     play_living_stream_start();

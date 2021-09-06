@@ -133,10 +133,9 @@ static void living_stream_task()
 
 void wifi_connect()
 {
-    ESP_LOGI(TAG, "[ 3 ] Start and wait for Wi-Fi network");
+    ESP_LOGI(TAG, "[ * ] Start and wait for Wi-Fi network");
     esp_periph_config_t periph_cfg = DEFAULT_ESP_PERIPH_SET_CONFIG();
     set = esp_periph_set_init(&periph_cfg);
-    ESP_LOGI(TAG, "WIFI_SSID");
     periph_wifi_cfg_t wifi_cfg = {
         .ssid = CONFIG_WIFI_SSID,
         .password = CONFIG_WIFI_PASSWORD,
@@ -155,11 +154,11 @@ void play_living_stream_start(void)
     // audio_board_handle_t board_handle = audio_board_init();
     // audio_hal_ctrl_codec(board_handle->audio_hal, AUDIO_HAL_CODEC_MODE_DECODE, AUDIO_HAL_CTRL_START);
 
-    ESP_LOGI(TAG, "[2.0] Create audio pipeline for playback");
+    ESP_LOGI(TAG, "[1.0] Create audio pipeline for playback");
     audio_pipeline_cfg_t pipeline_cfg = DEFAULT_AUDIO_PIPELINE_CONFIG();
     pipeline = audio_pipeline_init(&pipeline_cfg);
 
-    ESP_LOGI(TAG, "[2.1] Create http stream to read data");
+    ESP_LOGI(TAG, "[1.1] Create http stream to read data");
     http_stream_cfg_t http_cfg = HTTP_STREAM_CFG_DEFAULT();
     http_cfg.event_handle = _http_stream_event_handle;
     http_cfg.type = AUDIO_STREAM_READER;
@@ -191,17 +190,17 @@ void play_living_stream_start(void)
 
     
 
-    ESP_LOGI(TAG, "[ 4 ] Set up  event listener");
+    ESP_LOGI(TAG, "[ 3 ] Set up  event listener");
     audio_event_iface_cfg_t evt_cfg = AUDIO_EVENT_IFACE_DEFAULT_CFG();
     evt = audio_event_iface_init(&evt_cfg);
 
-    ESP_LOGI(TAG, "[4.1] Listening event from all elements of pipeline");
+    ESP_LOGI(TAG, "[3.1] Listening event from all elements of pipeline");
     audio_pipeline_set_listener(pipeline, evt);
 
-    ESP_LOGI(TAG, "[4.2] Listening event from peripherals");
+    ESP_LOGI(TAG, "[3.2] Listening event from peripherals");
     audio_event_iface_set_listener(esp_periph_set_get_event_iface(set), evt);
 
-    ESP_LOGI(TAG, "[ 5 ] Start audio_pipeline");
+    ESP_LOGI(TAG, "[ 4 ] Start audio_pipeline");
     audio_pipeline_run(pipeline);
 
     xTaskCreate(living_stream_task, "living_stream_task", 1024*2, NULL, 0, NULL);

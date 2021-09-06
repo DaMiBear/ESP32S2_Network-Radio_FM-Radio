@@ -261,7 +261,6 @@ static void radio_label_event_cb(lv_event_t* e)
     
     if (code == LV_EVENT_KEY)
     {
-        printf("radio_label_event_cb\n");
         uint32_t get_key = lv_indev_get_key(lv_indev_get_act());
         if (get_key == 'w' && my_scr1 == lv_scr_act())
         {
@@ -310,7 +309,6 @@ static void fre_label_event_cb(lv_event_t* e)
     
     if (code == LV_EVENT_KEY)
     {
-        printf("fre_label_event_cb\n");
         uint32_t get_key = lv_indev_get_key(lv_indev_get_act());
         if (get_key == 'w' && my_scr2 == lv_scr_act())
         {

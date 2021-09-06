@@ -258,8 +258,8 @@ esp_err_t rda5807m_init(rda5807m_t *dev, rda5807m_clock_freq_t clock_freq)
     ));
     // De-emphasis = 50us
     I2C_DEV_CHECK(&dev->i2c_dev, write_register_nolock(dev, REG_R4, BV(BIT_R4_DE)));
-    // Set volume = 0, Seek threshold = ~32 dB SNR, INT_MODE = 1 (?)
-    I2C_DEV_CHECK(&dev->i2c_dev, write_register_nolock(dev, REG_VOL, 0x8882 ));
+    // Set volume , Seek threshold = ~32 dB SNR, INT_MODE = 1 (?)
+    I2C_DEV_CHECK(&dev->i2c_dev, write_register_nolock(dev, REG_VOL, 0x888a ));
     I2C_DEV_CHECK(&dev->i2c_dev, update_register_nolock(dev, REG_VOL, MASK_VOL_VOLUME,
             0x02 << BIT_VOL_VOLUME));
 
