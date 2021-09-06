@@ -2,7 +2,7 @@
 
 这个项目是报名[《硬禾“暑期一起练”第3个平台 - 基于ESP32-S2模块的网络收音机和音频信号处理》](https://mp.weixin.qq.com/s/ED1UDWq3EFQPCbI2P3rHdw)所做的。
 
-<img src="\docs\images\0.png" style="zoom:80%;" />
+<img src="/docs/images/0.png" style="zoom:80%;" />
 
 **基本功能**：
 
@@ -42,19 +42,19 @@ git clone https://github.com/DaMiBear/ESP32S2_Network-Radio_FM-Radio.git
 
 VS Code打开项目文件夹后，F1输入如下命令，选择根据你的设备选择，项目中使用的是ESP32S2。
 
-<img src="\docs\images\1.png" style="zoom:80%;" />
+<img src="/docs/images/1.png" style="zoom:80%;" />
 
 ### 1.3 配置
 
 点击如下图标，进行设置
 
-<img src="\docs\images\2.png" alt="2" style="zoom:80%;" />
+<img src="/docs/images/2.png" alt="2" style="zoom:80%;" />
 
 ###### Audio HAL
 
 选择ESP32-S2-Kaluga-1，这个选项是属于ADF里的，ADF里大多数程序都是按照官方提供的那些开发板来的，官方开发板中的S2是有2MB的PSRAM的，这里主要是为了产生一些宏定义防止编译出错，具体初始化的程序是我们自己写的。
 
-<img src="\docs\images\3.png" style="zoom:80%;" />
+<img src="/docs/images/3.png" style="zoom:80%;" />
 
 ###### play_living_stream Configuration
 
@@ -66,19 +66,19 @@ VS Code打开项目文件夹后，F1输入如下命令，选择根据你的设�
 
 > 因为ADF的play_living_stream程序非常占内存，再加上FreeRTOS和LVGL，如果是默认设置，320K的内存是肯定不够的，所以要更改一些配置来节省内存。
 
-<img src="\docs\images\4.png" alt="4" style="zoom:80%;" />
+<img src="/docs/images/4.png" alt="4" style="zoom:80%;" />
 
 ###### ESP32S2-specific
 
 选择240MHz
 
-<img src="\docs\images\5.png"  style="zoom: 80%;" />
+<img src="/docs/images/5.png"  style="zoom: 80%;" />
 
 ###### Wi-Fi
 
 与IRAM有关的都去掉，要不然代码会直接放入内存中，虽然可以加快速度，但是内存是真的不够用。
 
-<img src="\docs\images\6.png"  style="zoom: 80%;" />
+<img src="/docs/images/6.png"  style="zoom: 80%;" />
 
 ###### LCD Drivers
 
@@ -92,7 +92,7 @@ VS Code打开项目文件夹后，F1输入如下命令，选择根据你的设�
 
 设置为6，默认的大小为32，就是32K，这样就会产生一个大小为32K的全局变量，这个才是内存占用的罪魁祸首。一开始没发现这一点，导致加入LVGL程序后，内存根本不够用。这里设置为6可以不报错，试过5或者更小，但在运行过程中会出错。
 
-<img src="\docs\images\7.png"  style="zoom: 80%;" />
+<img src="/docs/images/7.png"  style="zoom: 80%;" />
 
 ###### Font usage - Enable built-in fonts
 
@@ -126,7 +126,7 @@ VS Code打开项目文件夹后，F1输入如下命令，选择根据你的设�
 
 点击左下角图小，分辨是编译、下载、监视，第四个是三个功能合为一个按键。
 
-<img src="\docs\images\8.png"  style="zoom: 80%;" />
+<img src="/docs/images/8.png"  style="zoom: 80%;" />
 
 ## 2 运行现象
 
@@ -212,9 +212,9 @@ I (6831) HTTP_STREAM: total_bytes=57848
 
 **板子运行现象**
 
+![12](/docs/images/12.jpg)
 
-
-
+![13](/docs/images/13.jpg)
 
 ## 3 已知BUG
 
@@ -239,7 +239,7 @@ I (6831) HTTP_STREAM: total_bytes=57848
 
 每个组件可以包含Kconfig文件来进行一定的设置，就像在**1.3 配置**中选项的那样，这些GUI的配置界面都是根据Kconfig文件里的内容来显示的，就像下面这样，选中某个选项就会生成一个以`CONFIG_`开头的宏定义，以此来控制条件编译，Kconfig.projbuild也是类似，一些例程进场会使用Kconfig.projbuild文件来配置WiFi名称密码这样的信息。这些事情都是因为遇到了上面LVGL默认字体不能改变的问题才学习到了这些东西。
 
-<img src="\docs\images\9.png"  style="zoom: 80%;" />
+<img src="/docs/images/9.png"  style="zoom: 80%;" />
 
 ### **4.3 程序思路**
 
@@ -271,7 +271,7 @@ RDA5807M
 
 这个问题最要命，我一开始在esp-idf-lib中RDA5807M的例程基础上瞎改，比如把IIC的两个引脚调换、连续读写方式的地址和寄存器读写方式的地址调换。然后再改回最初的程序后，就没有声音输出了，在搜台模式下，频段也是一直卡在118.9MHz，一开始以为是设置的问题，结果把数据手册看了好几遍，也设置了好几遍，还是没有作用，同样的程序在别人的板子上就正常工作，后来没有办法了只能买了新的RDA5807M模块换上，结果一换就好了。而且后面还有一个坑，在更换了硬件之后，使用Arduino库来测试是正常工作的，但在使用esp-idf-lib中提供的例程，不论什么频段RSSI都是1，后来发现有一行程序把寄存器0x05写入了0x880f，在数据手册上看着是没问题，都是默认值，其中7:6位数据手册上没有写，但如果查看RDA5807MP的数据手册，可以发现7:6位是有定义的，RDA5807M和RDA5807MP不是一个芯片，但在RDA5807M的程序中按照RDA5807MP的手册设置了7:6位后，确实正常工作了。我也下了其他地方的RDA5807M的数据手册，都没有7:6位的定义。也许是我运气不好下的一直是劣质的数据手册？
 
-<img src="\docs\images\10.png"  style="zoom:50%;" />
+<img src="/docs/images/10.png"  style="zoom:50%;" />
 
-<img src="\docs\images\11.png"  style="zoom: 80%;" />
+<img src="/docs/images/11.png"  style="zoom: 80%;" />
 
